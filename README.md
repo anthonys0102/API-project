@@ -1,4 +1,4 @@
-# `<name of application here>`
+# `Api project`
 
 ## Database Schema Design
 
