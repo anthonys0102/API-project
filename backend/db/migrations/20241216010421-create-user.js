@@ -1,5 +1,9 @@
 
 'use strict' ;
+
+const { all } = require("../../routes/api/session");
+const { sequelize } = require("../models");
+
 let options = {};
 if (process.env.NODE_ENV === 'production') {
   options.schema = process.env.SCHEMA;  // define your schema in options object
@@ -13,6 +17,14 @@ module.exports = {
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
+      },
+      firstName: {
+        allowNull: false,
+        type: sequelize.STRING,
+      },
+      lastName: {
+        allowNull: false,
+        type: sequelize.STRING,
       },
       username: {
         type: Sequelize.STRING(30),
