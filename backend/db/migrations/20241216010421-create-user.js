@@ -10,50 +10,49 @@ if (process.env.NODE_ENV === 'production') {
 }
 module.exports = {
   async up(queryInterface, Sequelize) {
-    const { User } = require('../models'); // Import the User model
-
-    // Use bulkCreate to seed Users
-    await User.bulkCreate([
-      {
-        email: 'demo@user.io',
-        username: 'Demo-lition',
-        hashedPassword: 'hashed_password_1', // Replace with properly hashed passwords
-        firstName: 'Demo',
-        lastName: 'User',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+    await queryInterface.createTable('Users', {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER,
       },
-      {
-        email: 'user1@user.io',
-        username: 'UserOne',
-        hashedPassword: 'hashed_password_2', // Replace with properly hashed passwords
-        firstName: 'User',
-        lastName: 'One',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      firstName: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
-      {
-        email: 'user2@user.io',
-        username: 'UserTwo',
-        hashedPassword: 'hashed_password_3', // Replace with properly hashed passwords
-        firstName: 'User',
-        lastName: 'Two',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      lastName: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
-    ], {
-      validate: true, // Ensures data validation
-    });
+      email: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      username: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      hashedPassword: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      createdAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+      },
+      updatedAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+      },
+    }, options);
   },
 
-  async down(queryInterface, Sequelize) {
-    const { User } = require('../models'); // Import the User model
-
-    // Use destroy to remove seeded users
-    await User.destroy({
-      where: {
-        username: ['Demo-lition', 'UserOne', 'UserTwo'],
-      },
-    });
-  }
+  async down(queryInterface) {
+    await queryInterface.dropTable('Users');
+  },
 };
