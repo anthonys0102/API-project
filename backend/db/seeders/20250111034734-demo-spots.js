@@ -7,7 +7,8 @@ if (process.env.NODE_ENV === 'production') {
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await Spots.bulkCreate([
+    options.tableName = 'Spots';
+    await queryInterface.bulkInsert(options, [
       {
         ownerId: 1,
         address: '123 Main St',
@@ -50,14 +51,14 @@ module.exports = {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-    ], { validate: true });
+    ], {});
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     options.tableName = 'Spots';
     const Op = Sequelize.Op;
     return queryInterface.bulkDelete(options, {
-
-    }, {});
+      name: { [Op.in]: ['Cozy Apartment', 'Luxury Villa', 'Modern Loft'] },
+    });
   }
 };
