@@ -7,12 +7,9 @@ if (process.env.NODE_ENV === 'production') {
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    const { Spot } = require('../models');  // Import the Spot model
-
-    // Seed the database using bulkCreate
-    await Spot.bulkCreate([
+    await Spots.bulkCreate([
       {
-        ownerId: 1, // Ensure this matches a user ID from your Users table
+        ownerId: 1,
         address: '123 Main St',
         city: 'San Francisco',
         state: 'CA',
@@ -26,7 +23,7 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        ownerId: 2, // Ensure this matches a user ID from your Users table
+        ownerId: 2,
         address: '456 Elm St',
         city: 'Los Angeles',
         state: 'CA',
@@ -40,7 +37,7 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        ownerId: 3, // Ensure this matches a user ID from your Users table
+        ownerId: 3,
         address: '789 Oak St',
         city: 'Seattle',
         state: 'WA',
@@ -53,16 +50,14 @@ module.exports = {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-    ], {
-      validate: true,  // Optional: This ensures the data is validated before inserting
-    });
+    ], { validate: true });
   },
 
-  async down(queryInterface, Sequelize) {
-    // Remove all spots created in this seeder by name
+  async down (queryInterface, Sequelize) {
+    options.tableName = 'Spots';
     const Op = Sequelize.Op;
-    await queryInterface.bulkDelete('Spots', {
-      name: { [Op.in]: ['Cozy Apartment', 'Luxury Villa', 'Modern Loft'] },
-    });
+    return queryInterface.bulkDelete(options, {
+
+    }, {});
   }
 };
