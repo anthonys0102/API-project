@@ -53,7 +53,11 @@ module.exports = {
     ], { validate: true });
   },
 
-  async down(queryInterface) {
-    await queryInterface.bulkDelete('Spots', null, {});
-  },
+  async down (queryInterface, Sequelize) {
+    options.tableName = 'Spots';
+    const Op = Sequelize.Op;
+    return queryInterface.bulkDelete(options, {
+
+    }, {});
+  }
 };
