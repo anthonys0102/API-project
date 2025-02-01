@@ -1,14 +1,12 @@
 'use strict';
 
-let options = {};
-if (process.env.NODE_ENV === 'production') {
-  options.schema = process.env.SCHEMA;  // define your schema in options object
-}
 module.exports = {
-  async up(queryInterface) {
-    await queryInterface.bulkInsert('Spots', [
+  async up(queryInterface, Sequelize) {
+    const { Spot } = require('../models'); // Import Spot model
+
+    await Spot.bulkCreate([
       {
-        ownerId: 1,
+        ownerId: 1, // Ensure this ownerId exists in the Users table
         address: '123 Main St',
         city: 'San Francisco',
         state: 'CA',
@@ -49,10 +47,18 @@ module.exports = {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-    ]);
+    ], {
+      validate: true,
+    });
   },
 
-  async down(queryInterface) {
-    await queryInterface.bulkDelete('Spots', null, {});
-  },
+  async down(queryInterface, Sequelize) {
+    const { Spot } = require('../models'); // Import Spot model
+
+    await Spot.destroy({
+      where: {
+        name: ['Cozy Apartment', 'Luxury Villa', 'Modern Loft'],
+      },
+    });
+  }
 };

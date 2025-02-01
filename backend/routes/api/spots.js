@@ -1,12 +1,12 @@
 const express = require('express');
-const { Spot, SpotImage, Review } = require('../../db/models');
+const { Spot, SpotImage, Review, User } = require('../../db/models');
 const { requireAuth } = require('../../utils/auth');
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
 
 const router = express.Router();
 
-// Validation middleware for Spot creation
+// middleware for Spot creation & update
 const validateSpot = [
   check('address').exists({ checkFalsy: true }).withMessage('Address is required.'),
   check('city').exists({ checkFalsy: true }).withMessage('City is required.'),
@@ -29,87 +29,20 @@ const validateSpot = [
   handleValidationErrors,
 ];
 
-// Get all spots
-router.get('/', async (req, res) => {
-  try {
-    const spots = await Spot.findAll({
-      include: [
-        {
-          model: Review,
-          attributes: ['stars'],
-        },
-        {
-          model: SpotImage,
-          attributes: ['url', 'preview'],
-        },
-      ],
-    });
+// Validation for creating a review
+const validateReview = [
+  check('review').exists({ checkFalsy: true }).withMessage('Review text is required.'),
+  check('stars')
+    .exists({ checkFalsy: true })
+    .isInt({ min: 1, max: 5 })
+    .withMessage('Stars must be an integer from 1 to 5.'),
+  handleValidationErrors,
+];
 
-    const formattedSpots = spots.map((spot) => {
-      const reviews = spot.Reviews || [];
-      const avgRating =
-        reviews.length > 0
-          ? reviews.reduce((sum, review) => sum + review.stars, 0) / reviews.length
-          : null;
-
-      const previewImage = spot.SpotImages?.find((image) => image.preview)?.url || null;
-
-      return {
-        id: spot.id,
-        ownerId: spot.ownerId,
-        address: spot.address,
-        city: spot.city,
-        state: spot.state,
-        country: spot.country,
-        lat: spot.lat,
-        lng: spot.lng,
-        name: spot.name,
-        description: spot.description,
-        price: spot.price,
-        createdAt: spot.createdAt,
-        updatedAt: spot.updatedAt,
-        avgRating,
-        previewImage,
-      };
-    });
-
-    return res.json({ spots: formattedSpots });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'An error occurred while fetching spots.' });
-  }
-});
-
-// Create a new spot
-router.post('/', requireAuth, validateSpot, async (req, res) => {
-  const { address, city, state, country, lat, lng, name, description, price } = req.body;
-  const ownerId = req.user.id;
-
-  try {
-    const newSpot = await Spot.create({
-      ownerId,
-      address,
-      city,
-      state,
-      country,
-      lat,
-      lng,
-      name,
-      description,
-      price,
-    });
-
-    return res.status(201).json(newSpot);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'An error occurred while creating the spot.' });
-  }
-});
-
-// Add an Image to a Spot by ID
-router.post('/:spotId/images', requireAuth, async (req, res) => {
+// Create a review for a spot
+router.post('/:spotId/reviews', requireAuth, validateReview, async (req, res) => {
   const { spotId } = req.params;
-  const { url, preview } = req.body;
+  const { review, stars } = req.body;
   const userId = req.user.id;
 
   try {
@@ -119,24 +52,23 @@ router.post('/:spotId/images', requireAuth, async (req, res) => {
       return res.status(404).json({ message: 'Spot not found' });
     }
 
-    if (spot.ownerId !== userId) {
-      return res.status(403).json({ message: 'Forbidden: You are not authorized to add an image to this spot' });
+    const existingReview = await Review.findOne({ where: { spotId, userId } });
+
+    if (existingReview) {
+      return res.status(403).json({ message: 'You have already reviewed this spot.' });
     }
 
-    const newImage = await SpotImage.create({
+    const newReview = await Review.create({
+      userId,
       spotId,
-      url,
-      preview,
+      review,
+      stars,
     });
 
-    return res.status(201).json({
-      id: newImage.id,
-      url: newImage.url,
-      preview: newImage.preview,
-    });
+    return res.status(201).json(newReview);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'An error occurred while adding the image.' });
+    console.error('Error creating review:', err);
+    return res.status(500).json({ error: 'An error occurred while creating the review.' });
   }
 });
 
