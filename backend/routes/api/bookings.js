@@ -73,5 +73,50 @@ router.delete('/:bookingId', requireAuth, async (req, res) => {
     return res.status(500).json({ error: 'An error occurred while deleting the booking.' });
   }
 });
+router.delete('/:bookingId', requireAuth, async (req, res) => {
+  const { bookingId } = req.params;
+  const userId = req.user.id;
+  const today = new Date();
+
+  const booking = await Booking.findByPk(bookingId, { include: [{ model: Spot }] });
+  if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+  if (booking.userId !== userId && booking.Spot.ownerId !== userId)
+    return res.status(403).json({ message: 'Forbidden: You are not authorized to delete this booking' });
+
+  if (new Date(booking.startDate) <= today)
+    return res.status(400).json({ message: 'Bookings that have started cannot be deleted' });
+
+  await booking.destroy();
+  return res.json({ message: 'Successfully deleted' });
+});
+
+// Get all bookings for a spot
+router.get('/spots/:spotId/bookings', requireAuth, async (req, res) => {
+  const { spotId } = req.params;
+  const userId = req.user.id;
+
+  const spot = await Spot.findByPk(spotId);
+  if (!spot) return res.status(404).json({ message: 'Spot not found' });
+
+  const isOwner = spot.ownerId === userId;
+  const bookings = await Booking.findAll({
+    where: { spotId },
+    include: isOwner ? [{ model: User, attributes: ['id', 'firstName', 'lastName'] }] : [],
+  });
+
+  return res.json({
+    Bookings: bookings.map(booking => ({
+      id: booking.id,
+      spotId: booking.spotId,
+      userId: isOwner ? booking.userId : undefined,
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+      createdAt: isOwner ? booking.createdAt : undefined,
+      updatedAt: isOwner ? booking.updatedAt : undefined,
+      User: isOwner ? { id: booking.User.id, firstName: booking.User.firstName, lastName: booking.User.lastName } : undefined
+    }))
+  });
+});
 
 module.exports = router;

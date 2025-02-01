@@ -99,5 +99,33 @@ router.delete('/review-images/:imageId', requireAuth, async (req, res) => {
     return res.status(500).json({ error: 'An error occurred while deleting the review image.' });
   }
 });
+router.get('/spots/:spotId/reviews', async (req, res) => {
+  const { spotId } = req.params;
+
+  const spot = await Spot.findByPk(spotId);
+  if (!spot) return res.status(404).json({ message: 'Spot not found' });
+
+  const reviews = await Review.findAll({
+    where: { spotId },
+    include: [{ model: User, attributes: ['id', 'firstName', 'lastName'] }],
+  });
+
+  return res.json({ Reviews: reviews });
+});
+
+//  Get all reviews by the current user
+router.get('/reviews/current', requireAuth, async (req, res) => {
+  const userId = req.user.id;
+
+  const reviews = await Review.findAll({
+    where: { userId },
+    include: [
+      { model: Spot, attributes: ['id', 'name', 'address', 'city', 'state', 'country', 'price'] },
+      { model: ReviewImage, attributes: ['id', 'url'] },
+    ],
+  });
+
+  return res.json({ Reviews: reviews });
+});
 
 module.exports = router;
