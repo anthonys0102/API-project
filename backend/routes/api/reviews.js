@@ -1,82 +1,102 @@
 const express = require('express');
 const { requireAuth } = require('../../utils/auth');
-const { Review, ReviewImage, Spot, SpotImage, User } = require('../../db/models');
+const { Review, ReviewImage, Spot, User } = require('../../db/models');
+const { check } = require('express-validator');
+const { handleValidationErrors } = require('../../utils/validation');
 
 const router = express.Router();
 
 // Maximum allowed images per review
 const MAX_IMAGES_PER_REVIEW = 10;
 
-// Get all reviews of the current user
-router.get('/current', requireAuth, async (req, res) => {
+// Validation middleware for editing a review
+const validateReview = [
+  check('review').exists({ checkFalsy: true }).withMessage('Review text is required.'),
+  check('stars')
+    .exists({ checkFalsy: true })
+    .isInt({ min: 1, max: 5 })
+    .withMessage('Stars must be an integer from 1 to 5.'),
+  handleValidationErrors,
+];
+
+// Edit a Review by ID
+router.put('/:reviewId', requireAuth, validateReview, async (req, res) => {
+  const { reviewId } = req.params;
+  const { review, stars } = req.body;
   const userId = req.user.id;
 
   try {
-    const reviews = await Review.findAll({
-      where: { userId },
-      include: [
-        {
-          model: User,
-          attributes: ['id', 'firstName', 'lastName'],
-        },
-        {
-          model: Spot,
-          attributes: [
-            'id', 'ownerId', 'address', 'city', 'state', 'country',
-            'lat', 'lng', 'name', 'price'
-          ],
-          include: [
-            {
-              model: SpotImage,
-              attributes: ['url'],
-              where: { preview: true },
-              required: false,
-            }
-          ]
-        },
-        {
-          model: ReviewImage,
-          attributes: ['id', 'url'],
-        }
-      ],
+    const existingReview = await Review.findByPk(reviewId);
+
+    if (!existingReview) {
+      return res.status(404).json({ message: 'Review not found' });
+    }
+
+    if (existingReview.userId !== userId) {
+      return res.status(403).json({ message: 'Forbidden: You are not authorized to edit this review' });
+    }
+
+    await existingReview.update({ review, stars });
+
+    return res.json({
+      id: existingReview.id,
+      userId: existingReview.userId,
+      spotId: existingReview.spotId,
+      review: existingReview.review,
+      stars: existingReview.stars,
+      createdAt: existingReview.createdAt,
+      updatedAt: existingReview.updatedAt,
+    });
+  } catch (err) {
+    console.error('Error updating review:', err);
+    return res.status(500).json({ error: 'An error occurred while updating the review.' });
+  }
+});
+
+// Delete a Review by ID
+router.delete('/:reviewId', requireAuth, async (req, res) => {
+  const { reviewId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const review = await Review.findByPk(reviewId);
+
+    if (!review) {
+      return res.status(404).json({ message: 'Review not found' });
+    }
+
+    if (review.userId !== userId) {
+      return res.status(403).json({ message: 'Forbidden: You are not authorized to delete this review' });
+    }
+
+    await review.destroy();
+
+    return res.json({ message: 'Successfully deleted' });
+  } catch (err) {
+    console.error('Error deleting review:', err);
+    return res.status(500).json({ error: 'An error occurred while deleting the review.' });
+  }
+});
+
+router.delete('/review-images/:imageId', requireAuth, async (req, res) => {
+  const { imageId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const image = await ReviewImage.findByPk(imageId, {
+      include: [{ model: Review }],
     });
 
-    const formattedReviews = reviews.map(review => ({
-      id: review.id,
-      userId: review.userId,
-      spotId: review.spotId,
-      review: review.review,
-      stars: review.stars,
-      createdAt: review.createdAt,
-      updatedAt: review.updatedAt,
-      User: {
-        id: review.User.id,
-        firstName: review.User.firstName,
-        lastName: review.User.lastName,
-      },
-      Spot: {
-        id: review.Spot.id,
-        ownerId: review.Spot.ownerId,
-        address: review.Spot.address,
-        city: review.Spot.city,
-        state: review.Spot.state,
-        country: review.Spot.country,
-        lat: review.Spot.lat,
-        lng: review.Spot.lng,
-        name: review.Spot.name,
-        price: review.Spot.price,
-        previewImage: review.Spot.SpotImages?.[0]?.url || null,
-      },
-      ReviewImages: review.ReviewImages.map(image => ({
-        id: image.id,
-        url: image.url,
-      })),
-    }));
+    if (!image) return res.status(404).json({ message: 'Review image not found' });
 
-    return res.json({ Reviews: formattedReviews });
+    if (image.Review.userId !== userId)
+      return res.status(403).json({ message: 'Forbidden: You are not authorized to delete this image' });
+
+    await image.destroy();
+    return res.json({ message: 'Successfully deleted' });
   } catch (err) {
-    console.error('Error fetching user reviews:', err);
-    return res.status(500).json({ error: 'An error occurred while fetching the reviews.' });
+    console.error('Error deleting review image:', err);
+    return res.status(500).json({ error: 'An error occurred while deleting the review image.' });
   }
 });
 

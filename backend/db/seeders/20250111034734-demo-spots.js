@@ -1,64 +1,50 @@
 'use strict';
+const { Spot } = require('../models');
+
+let options = {};
+if (process.env.NODE_ENV === 'production') {
+  options.schema = process.env.SCHEMA;
+}
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    const { Spot } = require('../models'); // Import Spot model
-
     await Spot.bulkCreate([
       {
-        ownerId: 1, // Ensure this ownerId exists in the Users table
+        ownerId: 1,
         address: '123 Main St',
-        city: 'San Francisco',
-        state: 'CA',
-        country: 'USA',
-        lat: 37.7749,
-        lng: -122.4194,
-        name: 'Cozy Apartment',
-        description: 'A lovely, comfortable place to stay.',
-        price: 200.0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        ownerId: 2,
-        address: '456 Elm St',
         city: 'Los Angeles',
         state: 'CA',
         country: 'USA',
         lat: 34.0522,
         lng: -118.2437,
         name: 'Luxury Villa',
-        description: 'A luxurious villa with amazing views.',
-        price: 500.0,
+        description: 'A beautiful villa in LA',
+        price: 500,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        ownerId: 3,
-        address: '789 Oak St',
-        city: 'Seattle',
-        state: 'WA',
+        ownerId: 2,
+        address: '456 Beach Ave',
+        city: 'Miami',
+        state: 'FL',
         country: 'USA',
-        lat: 47.6062,
-        lng: -122.3321,
-        name: 'Modern Loft',
-        description: 'A modern loft in the heart of the city.',
-        price: 300.0,
+        lat: 25.7617,
+        lng: -80.1918,
+        name: 'Beachfront Condo',
+        description: 'Enjoy the ocean views!',
+        price: 350,
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
-    ], {
-      validate: true,
-    });
+      }
+    ], { validate: true });
   },
 
   async down(queryInterface, Sequelize) {
-    const { Spot } = require('../models'); // Import Spot model
-
-    await Spot.destroy({
-      where: {
-        name: ['Cozy Apartment', 'Luxury Villa', 'Modern Loft'],
-      },
-    });
+    options.tableName = 'Spots';
+    const Op = Sequelize.Op;
+    return queryInterface.bulkDelete(options, {
+      name: { [Op.in]: ['Luxury Villa', 'Beachfront Condo'] }
+    }, {});
   }
 };
